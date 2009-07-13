@@ -5,7 +5,10 @@
 
 open(Filename,Expect) ->
 	case file:open(Filename, [binary,read]) of
-		{ok, FD} -> {ok, spawn_link(fun () -> reader(FD,Expect) end)};
+		{ok, FD} -> 
+			{ok, spawn_link(fun () -> reader(FD,Expect) end)};
+		{error, enoent} ->
+			{ok, spawn_link(fun () -> reader_eof(Expect) end)};
 		Error -> Error
 	end.
 
