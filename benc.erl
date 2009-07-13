@@ -29,6 +29,7 @@ decode_dict(Tail,Acc) ->
 
 decode_string_len(<<$:,Tail/binary>>, Acc) ->
 	<<String:Acc/binary, Rest/binary>> = Tail,
-	{binary_to_list(String), Rest};
+	{String, Rest};
+	%{binary_to_list(String), Rest};
 decode_string_len(<<N ,Tail/binary>>, Acc) when N >= $0 andalso N =< $9 ->
 	decode_string_len(Tail, Acc*10 + (N - $0)).
