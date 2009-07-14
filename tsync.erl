@@ -2,12 +2,16 @@
 
 -export([check/1]).
 
--export([load_pieces/3]).
+-export([load_pieces/3,parse_torrent/1]).
+
+parse_torrent(FileName) ->
+	{ok, TData} = file:read_file(FileName),
+	{MetaInfo, <<>>} = benc:decode(TData),
+	MetaInfo.
 
 check(TorrentName) -> 
 	crypto:start(),
-	{ok, TData} = file:read_file(TorrentName),
-	{MetaInfo, <<>>} = benc:decode(TData),
+	MetaInfo = parse_torrent(TorrentName),
 	Info = proplists:get_value(<<"info">>, MetaInfo),
 
 	case proplists:is_defined(<<"length">>, Info) of
@@ -20,7 +24,8 @@ check_multi(Info) ->
 	FileData = proplists:get_value(<<"files">>, Info),
 	PieceData = proplists:get_value(<<"pieces">>, Info),
 	PieceLength = proplists:get_value(<<"piece length">>, Info),
-	FileList = [ read_file_item(I) || I <- FileData ],
+	BaseName = proplists:get_value(<<"name">>, Info),
+	FileList = [ read_file_item(BaseName, I) || I <- FileData ],
 	
 	Good = fun (Id) -> io:format("good piece ~p~n", [Id]) end,
 	Bad = fun (Id) -> io:format("bad piece ~p~n", [Id]) end,
@@ -32,10 +37,10 @@ check_multi(Info) ->
 %%%%%%%%%%%%%%%%%
 % Read a file item 
 
-read_file_item(Item) ->
+read_file_item(BaseName, Item) ->
 	Len = proplists:get_value(<<"length">>, Item),
 	PathList = proplists:get_value(<<"path">>, Item),
-	Path = string:join([binary_to_list(P) || P <- PathList] , "/"),
+	Path = string:join([binary_to_list(P) || P <- [BaseName|PathList]] , "/"),
 	{ Path, Len }.
 
 %%%%%%%%%%%%%%%%%
