@@ -2,15 +2,14 @@
 
 -export([write/2]).
 
-write(Info, { piece, Id, Data }) ->
-	FileData = proplists:get_value(<<"files">>, Info),
-	PieceSize = proplists:get_value(<<"piece length">>, Info),
-	_Slices = slice_piece(FileData, Id * PieceSize, Data).
+write(Torrent, { piece, Id, Data }) ->
+	Files = torrent:files(Torrent),
+	PieceLength = torrent:piece_length(Torrent),
+	_Slices = slice_piece(Files, Id * PieceLength, Data).
 
 
 slice_piece(_,_,<<>>) -> [];
-slice_piece([File|Tail], Offset, Data) ->
-	Size = proplists:get_value(<<"length">>, File),
+slice_piece([{File,Size}|Tail], Offset, Data) ->
 	if Size < Offset ->
 		slice_piece(Tail, Offset - Size, Data);
 	true ->

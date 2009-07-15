@@ -1,6 +1,11 @@
 -module(torrent).
 
--export([parse/1, multi/1, files/1]).
+-export([
+	parse/1,
+	multi/1,
+	files/1,
+	piece_length/1
+]).
 
 parse(FileName) ->
 	{ok, TData} = file:read_file(FileName),
@@ -13,6 +18,10 @@ multi(MetaInfo) ->
 		true -> single;
 		_    -> multi
 	end.
+
+piece_length(MetaInfo) ->
+	I = proplists:get_value(<<"info">>,MetaInfo),
+	proplists:get_value(<<"piece length">>, I).
 
 files(MetaInfo) ->
 	Info = proplists:get_value(<<"info">>, MetaInfo),
