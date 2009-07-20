@@ -6,6 +6,12 @@
 -record(st, {piece_length, files, writer}).
 -export([init/1, handle_call/3, handle_cast/2]).
 
+start(Torrent) -> gen_server:start_link(store,[Torrent],[]).
+
+write(PID, Req = {piece,_,_}) ->
+	gen_server:cast(PID,Req).
+
+
 init([Torrent]) -> 
 	Files = torrent:files(Torrent),
 	PieceLength = torrent:piece_length(Torrent),
@@ -14,11 +20,16 @@ init([Torrent]) ->
 		 files=Files,
 		 writer=PID}}.
 
+handle_call(done,_From,ST) ->
+	ST#st.writer ! {self(), done},
+	receive writer_terminating ->
+		{stop, normal, ok, []}
+	end.
 
 handle_cast({piece, Id, Data}, ST) ->
-	Slices = slice_piece(ST#st.files, ID * ST#st.piece_length, Data),
+	Slices = slice_piece(ST#st.files, Id * ST#st.piece_length, Data),
 	PID = ST#st.writer,
-	[PID ! S || Slices ],
+	[PID ! S || S <- Slices ],
 	{noreply, ST}.
 
 
@@ -55,7 +66,8 @@ writer(FileName,FD) ->
 				writer(null,null)
 			end
 	        end;
-	    done ->
+	    {PID, done} ->
+	    	PID ! writer_terminating,
 	        ok
 end.
 
