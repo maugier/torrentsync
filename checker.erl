@@ -8,6 +8,7 @@ display() -> {
 	}.
 
 start(Torrent,{Good,Bad}) -> 
+	crypto:start(),
 	Pieces = torrent:pieces(Torrent),
 	spawn_link(fun () -> loop(Pieces,Good,Bad,0) end).
 
