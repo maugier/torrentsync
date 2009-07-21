@@ -1,72 +1,29 @@
 -module(tsync).
 
--export([check/1]).
+-export([check/1, check/2, sync/3]).
 
--export([load_pieces/3,parse_torrent/1]).
-
-parse_torrent(FileName) ->
-	{ok, TData} = file:read_file(FileName),
-	{MetaInfo, <<>>} = benc:decode(TData),
-	MetaInfo.
-
-check(TorrentName) -> 
-	crypto:start(),
-	MetaInfo = parse_torrent(TorrentName),
-	Info = proplists:get_value(<<"info">>, MetaInfo),
-
-	case proplists:is_defined(<<"length">>, Info) of
-		true -> check_single(Info);
-		_    -> check_multi(Info) end.
+check(TorrentFile) -> check(TorrentFile, default).
 
 
-check_single(_Info) -> {error, not_impl, check_single}.
-check_multi(Info) -> 
-	FileData = proplists:get_value(<<"files">>, Info),
-	PieceData = proplists:get_value(<<"pieces">>, Info),
-	PieceLength = proplists:get_value(<<"piece length">>, Info),
-	BaseName = proplists:get_value(<<"name">>, Info),
-	FileList = [ read_file_item(BaseName, I) || I <- FileData ],
-	
-	Good = fun (Id) -> io:format("good piece ~p~n", [Id]) end,
-	Bad = fun (Id) -> io:format("bad piece ~p~n", [Id]) end,
+check(TorrentFile, Base) ->
+	T = torrent:parse(TorrentFile),
+	PID = self(),
+	CK = checker:start(T, {
+		fun (Id) -> PID ! { good, Id } end,
+		fun (Id) -> PID ! { missing, Id } end
+	}),
+	loader:load(T,Base,CK),
+	PID ! done,
+	display_good([]).
 
-	Checker = checker:start(PieceData, {Good,Bad}),
-
-	load_pieces(Checker, FileList, PieceLength).
-
-%%%%%%%%%%%%%%%%%
-% Read a file item 
-
-read_file_item(BaseName, Item) ->
-	Len = proplists:get_value(<<"length">>, Item),
-	PathList = proplists:get_value(<<"path">>, Item),
-	Path = string:join([binary_to_list(P) || P <- [BaseName|PathList]] , "/"),
-	{ Path, Len }.
-
-%%%%%%%%%%%%%%%%%
-% Load the pieces data from a torrent
-load_pieces(Dest,FileList,PSize) -> load_pieces(Dest,FileList,PSize,0,<<>>).
-
-load_pieces(Dest,[],_,Cnt,Last) ->
-	Dest ! {piece,Cnt,Last},
-	ok;
-
-load_pieces(Dest,[{File,Len}|FT],PS,Cnt,Last) -> 
-	{ok, FD} = pad_read:open(File,Len),
-	{ok, NewCnt, NewLast} = load_pieces_file(Dest,FD,PS,Cnt,Last),
-	ok = pad_read:close(FD),
-	load_pieces(Dest,FT,PS,NewCnt,NewLast).
-
-load_pieces_file(Dest,FD,PS,Cnt,Last) ->
-	ToRead = PS - size(Last),
-	{ok, Data} = pad_read:read(FD,ToRead),
-	if size(Data) < ToRead ->
-		{ok, Cnt, <<Last/binary,Data/binary>>};
-	true -> 
-		Dest ! {piece, Cnt, <<Last/binary,Data/binary>>},
-		load_pieces_file(Dest,FD,PS,Cnt+1,<<>>)
-	end.
-	
-	
+display_good(Acc) -> receive
+	{ good, _ } -> display_good([$+|Acc]);
+	{ missing, _ } -> display_good([$-|Acc]);
+	done -> lists:reverse(Acc)
+end.
 
 
+sync(Torrent,From,From) -> {error, same_source_and_dest}.
+sync(Torrent,From,To) ->
+	T = torrent:parse(Torrent),
+	Store = store:start(Torrent,To),
