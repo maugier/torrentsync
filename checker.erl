@@ -1,9 +1,14 @@
 -module(checker).
 
--export([start/2]).
+-export([start/2, display/0]).
 
-start(PieceData,{Good,Bad}) -> 
-	Pieces = split_pieces(PieceData),
+display() -> {
+	fun (ID) -> io:format("Piece ~p was OK~n",[ID]) end,
+	fun (ID) -> io:format("Piece ~p was BAD~n",[ID]) end
+	}.
+
+start(Torrent,{Good,Bad}) -> 
+	Pieces = torrent:pieces(Torrent),
 	spawn_link(fun () -> loop(Pieces,Good,Bad,0) end).
 
 
@@ -20,11 +25,3 @@ loop([Hash|Tail], Good, Bad, Id) ->
 
 loop([],_,_,_) -> ok.
 
-
-%%%%%%%%%%%%%%%%
-% Split the blob of hashes in a list of valid hashes
-
-split_pieces(<<>>) ->
-	[];
-split_pieces(<<Piece:20/binary, Rest/binary>>) ->
-	[ Piece | split_pieces(Rest) ].

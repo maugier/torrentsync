@@ -1,23 +1,25 @@
 -module(loader).
 
--export([check/3, display/0]).
+-export([load/3, pieces/1, pieces/2]).
+
+pieces(Torrent) -> pieces(Torrent, default).
+pieces(Torrent, Base) ->
+	PID = self(),
+	spawn_link(fun () -> load(Torrent,Base,PID) end),
+	gather().
+
+gather() -> receive
+	load_done -> [];
+	Piece = {piece,_,_} -> [Piece | gather()]
+end.
 
 
-display() -> { fun(_Id) -> io:format("+") end,
-               fun(_Id) -> io:format(".") end }.
-
-check(Torrent,Base,Dest) -> 
-	check(Torrent, Base, Dest, torrent:multi(Torrent)).
-
-check(_Torrent,_B,_D,single) -> {error, not_impl, check_single};
-check(Torrent,Base,Dest,multi) -> 
-	PieceData = torrent:piece_data(Torrent),
+load(Torrent,Base,Dest) ->
 	PieceLength = torrent:piece_length(Torrent),
 	FileList = torrent:files(Torrent,Base),
-	
-	Checker = checker:start(PieceData, Dest),
+	load_pieces(Dest, FileList, PieceLength),
+	Dest ! load_done.
 
-	load_pieces(Checker, FileList, PieceLength).
 
 %%%%%%%%%%%%%%%%%
 % Load the pieces data from a torrent

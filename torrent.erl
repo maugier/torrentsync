@@ -7,7 +7,7 @@
 	files/2,
 	basename/1,
 	piece_length/1,
-	piece_data/1
+	pieces/1
 ]).
 
 parse(FileName) ->
@@ -26,12 +26,24 @@ piece_length(MetaInfo) ->
 	I = proplists:get_value(<<"info">>,MetaInfo),
 	proplists:get_value(<<"piece length">>, I).
 
-piece_data(MetaInfo) ->
+pieces(MetaInfo) ->
 	I = proplists:get_value(<<"info">>,MetaInfo),
-	proplists:get_value(<<"pieces">>, I).
+	Data = proplists:get_value(<<"pieces">>, I),
+	split_pieces(Data).
 
-files(MetaInfo) -> files(MetaInfo, undefined).
-files(MetaInfo, undefined) -> files(MetaInfo, <<".">>);
+split_pieces(<<>>) ->
+        [];
+split_pieces(<<Piece:20/binary, Rest/binary>>) ->
+        [ Piece | split_pieces(Rest) ].
+
+files(MetaInfo) -> files(MetaInfo, default).
+
+files(MetaInfo, default) -> 
+	Info = proplists:get_value(<<"info">>, MetaInfo),
+	Base = proplists:get_value(<<"name">>, Info),
+	files(MetaInfo, Base);
+files(MetaInfo, Base) when is_list(Base) ->
+	files(MetaInfo, list_to_binary(Base));
 files(MetaInfo, Base) ->
 	Info = proplists:get_value(<<"info">>, MetaInfo),
 	Files = proplists:get_value(<<"files">>, Info),
