@@ -1,0 +1,38 @@
+===============
+TorrentSync 0.1
+===============
+
+TorrentSync aims to behave similarly to rsync, but with added cleverness when
+syncing torrents. It is useful when two hosts hold a partial copy of the same
+torrent, and you want one of the hosts to help the other complete its copy.
+
+If the source host has the complete torrent, or if its copy is stricly more
+complete than the other (i.e. the source host has all the pieces that the
+destination host have, and mode), there is no need for a special tool. Just
+use rsync.
+
+However, if the destination host has pieces that the source does not, then using
+rsync may overwrite good pieces with invalid data. TorrentSync will avoid
+that, using the information in the .torrent file to synchronize only pieces that are good on the source and bad on the destination.
+
+
+=================
+
+Overview:
+  - benc    : translate b-encoded data to erlang terms
+  - torrent : read and parse a torrent file using benc, access to the various
+              torrent fields
+  - pad_reader : abstraction layer to pad incomplete, trunctated files when
+                 reading
+  - loader     : load pieces from a torrent at a given location
+  - checker    : hash pieces, report good and bad pieces
+  - differ     : receive pieces from the source, receive piece requests from
+                 the destination and send them back
+  
+  - store : receive pieces and writes them to disk
+  - tsync : plumbing and test wrappers
+
+
+
+ 
+
