@@ -1,24 +1,29 @@
 -module(store).
 
--export([start/1, write/2]).
+-export([start/1, start/2, write/2]).
 
 -behaviour(gen_server).
--record(st, {piece_length, files, writer}).
+-record(st, {piece_length, files, writer, locbase}).
 -export([init/1, handle_call/3, handle_cast/2]).
 
-start(Torrent) -> gen_server:start_link(store,[Torrent],[]).
+start(Torrent) -> start(Torrent, undefined).
+start(Torrent,Loc) -> gen_server:start_link(store,[Torrent,Loc],[]).
 
 write(PID, Req = {piece,_,_}) ->
 	gen_server:cast(PID,Req).
 
+init([Torrent,undefined]) ->
+	Loc = torrent:basename(Torrent),
+	init([Torrent,Loc]);
 
-init([Torrent]) -> 
+init([Torrent,Loc]) -> 
 	Files = torrent:files(Torrent),
 	PieceLength = torrent:piece_length(Torrent),
-	PID = spawn_link(fun writer/0),
+	PID = spawn_link(fun () -> writer(Loc) end),
 	{ok, #st{piece_length=PieceLength,
 		 files=Files,
-		 writer=PID}}.
+		 writer=PID,
+		 locbase=Loc}}.
 
 handle_call(done,_From,ST) ->
 	ST#st.writer ! {self(), done},
@@ -46,24 +51,24 @@ slice_piece([{File,Size}|Tail], Offset, Data) ->
 			 slice_piece(Tail, 0, Rest) ]
 		end
 	end.
-writer() -> writer(null,null).
-writer(FileName,FD) ->
+writer(Loc) -> writer(null,null,Loc).
+writer(FileName,FD,Loc) ->
 	receive 
 	    {write_piece, NewFileName, Offset, Slice} ->
 		if 
 		    FileName == NewFileName ->
 			write_to_fd(FD,Offset,Slice),
-			writer(FileName,FD);
+			writer(FileName,FD,Loc);
 		    true ->
 		    	ok = case FD of null -> ok; _ -> file:close(FD) end,
-			case file:open(NewFileName,[write,binary]) of
+			case file:open(Loc ++ "/" ++ NewFileName,[write,binary]) of
 			    {ok, NewFD} ->
 			    	write_to_fd(NewFD,Offset,Slice),
-				writer(NewFileName, NewFD);
+				writer(NewFileName, NewFD,Loc);
 			    Err -> 
 				error_logger:error_report
 					([opening_fd, {err,Err}]),
-				writer(null,null)
+				writer(null,null,Loc)
 			end
 	        end;
 	    {PID, done} ->

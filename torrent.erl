@@ -4,7 +4,9 @@
 	parse/1,
 	multi/1,
 	files/1,
-	piece_length/1
+	basename/1,
+	piece_length/1,
+	piece_data/1
 ]).
 
 parse(FileName) ->
@@ -23,16 +25,21 @@ piece_length(MetaInfo) ->
 	I = proplists:get_value(<<"info">>,MetaInfo),
 	proplists:get_value(<<"piece length">>, I).
 
+piece_data(MetaInfo) ->
+	proplists:get_value(<<"pieces">>, MetaInfo).
+
 files(MetaInfo) ->
 	Info = proplists:get_value(<<"info">>, MetaInfo),
 	Files = proplists:get_value(<<"files">>, Info),
-	BaseName = proplists:get_value(<<"name">>, Info),
-	[ read_file_item(BaseName, Item) || Item <- Files ].
+	[ read_file_item(Item) || Item <- Files ].
 
-read_file_item(BaseName, Item) ->
+basename(MetaInfo) ->
+	proplists:get_value(<<"name">>, MetaInfo).
+
+read_file_item(Item) ->
 	Len = proplists:get_value(<<"length">>, Item),
 	PathList = proplists:get_value(<<"path">>, Item),
-	Path = string:join([binary_to_list(P) || P <- [BaseName|PathList]] , "/"),
+	Path = string:join([binary_to_list(P) || P <- PathList] , "/"),
 	{ Path, Len }.
 
 
