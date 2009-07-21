@@ -33,6 +33,12 @@ Overview:
   - tsync : plumbing and test wrappers
 
 
+  SOURCE                          DESTINATION
 
- 
-
+  loader                           loader
+   | |      			    |
+   | checker                        |
+   | |                              |
+  differ<------need_piece-------checker
+     |
+     \---------piece------------>store
