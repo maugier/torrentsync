@@ -2,27 +2,26 @@
 
 -export([start/2, display/0]).
 
-display() -> {
-	fun (ID) -> io:format("Piece ~p was OK~n",[ID]) end,
-	fun (ID) -> io:format("Piece ~p was BAD~n",[ID]) end
-	}.
+display() -> 
+	fun (ID,_,good)    -> io:format("Piece ~p was OK~n",[ID]);
+	    (ID,_,missing) -> io:format("Piece ~p was BAD~n", [ID]) end.
 
-start(Torrent,{Good,Bad}) -> 
+start(Torrent,Hook) -> 
 	crypto:start(),
 	Pieces = torrent:pieces(Torrent),
-	spawn_link(fun () -> loop(Pieces,Good,Bad,0) end).
+	spawn_link(fun () -> loop(Pieces,Hook,0) end).
 
 
-loop([Hash|Tail], Good, Bad, Id) ->
+loop([Hash|Tail], Hook, Id) ->
 	receive { piece, Id, Data } ->
 		case crypto:sha(Data) == Hash of
-			true -> Good(Id);
-			false -> Bad(Id)
+			true -> Hook(Id,Data,good);
+			false -> Hook(Id,Data,missing)
 		end,
-		loop(Tail,Good,Bad,Id+1);
+		loop(Tail,Hook,Id+1);
 	_ ->
-		loop([Hash|Tail], Good, Bad, Id)
+		loop([Hash|Tail], Hook, Id)
 	end;
 
-loop([],_,_,_) -> ok.
+loop([],_,_) -> ok.
 
