@@ -7,8 +7,6 @@
 -export([init/1, handle_call/3, handle_cast/2]).
 
 start(Torrent) -> start(Torrent, undefined).
-
-start(Torrent,{Node,Loc}) -> rpc:call(Node,store,start,[Torrent,Loc]);
 start(Torrent,Loc) -> gen_server:start_link(store,[Torrent,Loc],[]).
 
 write(PID, Req = {piece,_,_}) ->

@@ -13,8 +13,7 @@ gather() -> receive
 	Piece = {piece,_,_} -> [Piece | gather()]
 end.
 
-load(Torrent,{Node,Base},Dest) ->
-	rpc:call(Node,loader,load,[Torrent,Base,Dest]);
+
 load(Torrent,Base,Dest) ->
 	PieceLength = torrent:piece_length(Torrent),
 	FileList = torrent:files(Torrent,Base),
