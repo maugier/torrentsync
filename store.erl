@@ -4,7 +4,7 @@
 
 -behaviour(gen_server).
 -record(st, {piece_length, files, writer, locbase}).
--export([init/1, handle_call/3, handle_cast/2]).
+-export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2,code_change/3]).
 
 start(Torrent) -> start(Torrent, undefined).
 start(Torrent,Loc) -> gen_server:start_link(store,[Torrent,Loc],[]).
@@ -17,7 +17,7 @@ init([Torrent,undefined]) ->
 	init([Torrent,Loc]);
 
 init([Torrent,Loc]) -> 
-	Files = torrent:files(Torrent),
+	Files = torrent:files(Torrent,Loc),
 	PieceLength = torrent:piece_length(Torrent),
 	PID = spawn_link(fun () -> writer(Loc) end),
 	{ok, #st{piece_length=PieceLength,
@@ -36,6 +36,13 @@ handle_cast({piece, Id, Data}, ST) ->
 	PID = ST#st.writer,
 	[PID ! S || S <- Slices ],
 	{noreply, ST}.
+
+handle_info(_,ST) -> {noreply,ST}.
+
+terminate(Reason,State) -> 
+	io:format("Store terminating (~p) ~p~n",[Reason,State]).
+
+code_change(_Old,St,_Ex) -> {ok, St}.
 
 
 slice_piece(_,_,<<>>) -> [];
@@ -61,13 +68,13 @@ writer(FileName,FD,Loc) ->
 			writer(FileName,FD,Loc);
 		    true ->
 		    	ok = case FD of null -> ok; _ -> file:close(FD) end,
-			case file:open(Loc ++ "/" ++ NewFileName,[write,binary]) of
+			case file:open(NewFileName,[read,write,binary]) of
 			    {ok, NewFD} ->
 			    	write_to_fd(NewFD,Offset,Slice),
 				writer(NewFileName, NewFD,Loc);
 			    Err -> 
 				error_logger:error_report
-					([opening_fd, {err,Err}]),
+					([opening_fd, {err,Err},{path,NewFileName}]),
 				writer(null,null,Loc)
 			end
 	        end;
