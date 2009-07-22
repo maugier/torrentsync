@@ -4,7 +4,8 @@
 
 display() -> 
 	fun (ID,_,good)    -> io:format("Piece ~p was OK~n",[ID]);
-	    (ID,_,missing) -> io:format("Piece ~p was BAD~n", [ID]) end.
+	    (ID,_,missing) -> io:format("Piece ~p was BAD~n", [ID]);
+	    (_,_,done)     -> io:format("done.") end.
 
 start(Torrent,Hook) -> 
 	crypto:start(),
@@ -23,5 +24,5 @@ loop([Hash|Tail], Hook, Id) ->
 		loop([Hash|Tail], Hook, Id)
 	end;
 
-loop([],_,_) -> ok.
+loop([],Hook,_) -> Hook([],[],done).
 

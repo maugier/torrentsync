@@ -13,7 +13,7 @@ write(PID, Req = {piece,_,_}) ->
 	gen_server:cast(PID,Req).
 
 init([Torrent,undefined]) ->
-	Loc = torrent:basename(Torrent),
+	Loc = binary_to_list(torrent:basename(Torrent)),
 	init([Torrent,Loc]);
 
 init([Torrent,Loc]) -> 
@@ -77,4 +77,5 @@ writer(FileName,FD,Loc) ->
 end.
 
 write_to_fd(FD, Offset, Slice) ->
+	io:format("Writing ~p bytes at ~p~n",[byte_size(Slice),Offset]),
 	ok = file:pwrite(FD,[{{bof,Offset},Slice}]).
