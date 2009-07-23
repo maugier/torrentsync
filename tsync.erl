@@ -19,7 +19,7 @@ display_good(Acc) -> receive
 end.
 
 remote_check_hook(PID) ->
-	fun (Id,Stat) -> PID ! { piece_status, Id, Stat } end.
+	fun (Id,_,Stat) -> PID ! { piece_status, Id, Stat } end.
 
 sync(_,From,From) -> {error, same_source_and_dest};
 sync(Torrent,{Node,From},To) -> rpc:call(Node,?MODULE,sync,[Torrent,From,To]);
@@ -30,10 +30,11 @@ sync(Torrent,From,{Node,To}) ->
 	RemoteChecker = run_maybe_local(Node,{checker, start, [
 		T, remote_check_hook(Diff)]}),
 	_RemoteLoader = run_maybe_local(Node,{loader,start,[
-		Torrent,To,RemoteChecker]}),
+		T,To,RemoteChecker]}),
 	LocalChecker = checker:start(T,fun
 		(Id,Data,good) -> Diff ! { piece, Id, Data };
-		(_,_,missing) -> ok
+		(_,_,missing) -> ok;
+		(_,_,done)    -> Diff ! load_done
 	end),
 	loader:load(T,From,LocalChecker);
 	

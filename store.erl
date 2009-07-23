@@ -1,18 +1,20 @@
 -module(store).
 
--export([start/1, start/2, write/2]).
+-export([start/1, start/2, write/2, finish/1]).
 
 -behaviour(gen_server).
 -record(st, {piece_length, files, writer, locbase}).
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2,code_change/3]).
 
-start(Torrent) -> start(Torrent, undefined).
+start(Torrent) -> start(Torrent, default).
 start(Torrent,Loc) -> gen_server:start_link(store,[Torrent,Loc],[]).
 
 write(PID, Req = {piece,_,_}) ->
 	gen_server:cast(PID,Req).
 
-init([Torrent,undefined]) ->
+finish(PID) -> gen_server:call(PID,done).
+
+init([Torrent,default]) ->
 	Loc = binary_to_list(torrent:basename(Torrent)),
 	init([Torrent,Loc]);
 
@@ -32,6 +34,7 @@ handle_call(done,_From,ST) ->
 	end.
 
 handle_cast({piece, Id, Data}, ST) ->
+	io:format("Writing piece ~p at ~p~n",[Id,ST#st.locbase]),
 	Slices = slice_piece(ST#st.files, Id * ST#st.piece_length, Data),
 	PID = ST#st.writer,
 	[PID ! S || S <- Slices ],

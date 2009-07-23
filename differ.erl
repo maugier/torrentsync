@@ -10,15 +10,14 @@ loop(Store) -> receive
 		process_piece(Piece,Store),
 		loop(Store);	
 	load_done -> 
-		gen_server:call(Store, done),
-		ok
+		store:finish(Store)
 end.
 
 process_piece(Piece = {piece,Id,_},Store) -> receive
 	{ piece_status, Id, good } ->
 		loop(Store);
 	{ piece_status, Id, missing } ->
-		gen_server:cast(Store, Piece),
+		store:write(Store, Piece),
 		loop(Store);
 	{ piece_status, OtherId, _ } when OtherId < Id ->
 		process_piece(Piece,Store);
