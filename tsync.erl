@@ -25,7 +25,7 @@ sync(_,From,From) -> {error, same_source_and_dest};
 sync(Torrent,{Node,From},To) -> rpc:call(Node,?MODULE,sync,[Torrent,From,To]);
 sync(Torrent,From,{Node,To}) -> 
 	T = torrent:parse(Torrent),
-	{ok, Store} = run_maybe_local(Node,{store,start,[Torrent,To]}),
+	{ok, Store} = run_maybe_local(Node,{store,start,[T,To]}),
 	Diff = differ:start(Store),
 	RemoteChecker = run_maybe_local(Node,{checker, start, [
 		T, remote_check_hook(Diff)]}),
