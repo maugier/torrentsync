@@ -13,20 +13,20 @@
 parse(FileName) ->
 	{ok, TData} = file:read_file(FileName),
 	{MetaInfo, <<>>} = benc:decode(TData),
-	MetaInfo.
+	{torrent, MetaInfo}.
 
-multi(MetaInfo) ->
+multi({torrent,MetaInfo}) ->
 	Info = proplists:get_value(<<"info">>, MetaInfo),
 	case proplists:is_defined(<<"length">>, Info) of
 		true -> single;
 		_    -> multi
 	end.
 
-piece_length(MetaInfo) ->
+piece_length({torrent,MetaInfo}) ->
 	I = proplists:get_value(<<"info">>,MetaInfo),
 	proplists:get_value(<<"piece length">>, I).
 
-pieces(MetaInfo) ->
+pieces({torrent,MetaInfo}) ->
 	I = proplists:get_value(<<"info">>,MetaInfo),
 	Data = proplists:get_value(<<"pieces">>, I),
 	split_pieces(Data).
@@ -36,20 +36,20 @@ split_pieces(<<>>) ->
 split_pieces(<<Piece:20/binary, Rest/binary>>) ->
         [ Piece | split_pieces(Rest) ].
 
-files(MetaInfo) -> files(MetaInfo, default).
+files(T={torrent,_}) -> files(T, default).
 
-files(MetaInfo, default) -> 
+files(T={torrent,MetaInfo}, default) -> 
 	Info = proplists:get_value(<<"info">>, MetaInfo),
 	Base = proplists:get_value(<<"name">>, Info),
-	files(MetaInfo, Base);
-files(MetaInfo, Base) when is_list(Base) ->
-	files(MetaInfo, list_to_binary(Base));
-files(MetaInfo, Base) ->
+	files(T, Base);
+files(T={torrent,_}, Base) when is_list(Base) ->
+	files(T, list_to_binary(Base));
+files({torrent,MetaInfo}, Base) ->
 	Info = proplists:get_value(<<"info">>, MetaInfo),
 	Files = proplists:get_value(<<"files">>, Info),
 	[ read_file_item(Item,Base) || Item <- Files ].
 
-basename(MetaInfo) ->
+basename({torrent,MetaInfo}) ->
 	I = proplists:get_value(<<"info">>,MetaInfo),
 	proplists:get_value(<<"name">>, I).
 
