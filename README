@@ -22,12 +22,12 @@ Overview:
   - benc    : translate b-encoded data to erlang terms
   - torrent : read and parse a torrent file using benc, access to the various
               torrent fields
-  - pad_reader : abstraction layer to pad incomplete, trunctated files when
-                 reading
+  - pad_reader : abstraction layer to read a file from a fixed size, padding with 0
+                 if the file is absent or not the correct length.
   - loader     : load pieces from a torrent at a given location
-  - checker    : hash pieces, report good and bad pieces
-  - differ     : receive pieces from the source, receive piece requests from
-                 the destination and send them back
+  - checker    : hash pieces, check against a torrent structure, and report good and bad pieces
+  - differ     : receive pieces from the source, drops pieces that the destination already has, and
+                 sends the missing pieces to a store.
   
   - store : receive pieces and writes them to disk
   - tsync : plumbing and test wrappers
