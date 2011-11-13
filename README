@@ -36,9 +36,9 @@ Overview:
   SOURCE                          DESTINATION
 
   loader                           loader
-   | |      			    |
-   | checker                        |
-   | |                              |
+     |      			    |
+  checker                           |
+     |                              |
   differ<------need_piece-------checker
      |
      \---------piece------------>store
