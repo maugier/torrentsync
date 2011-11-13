@@ -10,6 +10,9 @@
 	pieces/1
 ]).
 
+parse({Node,FileName}) ->
+	rpc:call(Node,?MODULE,parse,[FileName]);
+
 parse(FileName) ->
 	{ok, TData} = file:read_file(FileName),
 	{MetaInfo, <<>>} = benc:decode(TData),
